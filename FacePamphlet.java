@@ -1,5 +1,5 @@
 /* 
- * File: FacePamphlet.java
+ * File: FacePamphletExtension.java
  * -----------------------
  * When it is finished, this program will implement a basic social network
  * management system.
@@ -9,23 +9,32 @@ import acm.program.*;
 import acm.graphics.*;
 import acm.util.*;
 import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import javax.swing.*;
 
-public class FacePamphlet extends Program 
+public class FacePamphletExtension extends Program 
 					implements FacePamphletConstants {
 	
 	// instance variables
 	private JTextField nameTextField , statusTextField , pictureTextField , friendTextField;
-	private JButton addButton , deleteButton , lookupButton , statusChangeButton , pictureChangeButton , friendAddButton;
+	private JButton addButton , deleteButton , lookupButton , statusChangeButton , pictureChangeButton , friendAddButton ,
+					logInButton , logOutButton , homeButton , friendRemoveButton , friendSuggestionButton;
 	private JLabel nameLabel = new JLabel("Name");
 	
-	private FacePamphletDatabase dataBase = new FacePamphletDatabase();
+	private FacePamphletDatabaseExtension dataBase = new FacePamphletDatabaseExtension();
 	
-	private FacePamphletProfile currentProfile;
+	private FacePamphletProfileExtension currentProfile;
 	
-	private FacePamphletCanvas canvas;
+	private FacePamphletCanvasExtension canvas;
+	
+	private int numberOfTimesFriendSuggestionWasUsed = 0;
 
 	/**
 	 * This method has the responsibility for initializing the 
@@ -33,7 +42,7 @@ public class FacePamphlet extends Program
 	 * initialization that needs to be performed.
 	 */
 	public void init() {
-		canvas = new FacePamphletCanvas();
+		canvas = new FacePamphletCanvasExtension();
 		add(canvas);
 		
 		initializeInteractors();
@@ -57,6 +66,11 @@ public class FacePamphlet extends Program
 		statusChangeButton = new JButton("Change Status");
 		pictureChangeButton = new JButton("Change Photo");
 		friendAddButton = new JButton("Add Friend");
+		friendRemoveButton = new JButton("Remove Friend");
+		logInButton = new JButton("Log in");
+		logOutButton = new JButton("Log out");
+		homeButton = new JButton("Home");
+		friendSuggestionButton = new JButton("Friend Suggestion");
 	}
 	
 	private void addActionListenersToInteractors() { // adds action listeners to the textFields
@@ -70,8 +84,12 @@ public class FacePamphlet extends Program
 		add(nameLabel , NORTH);
 		add(nameTextField , NORTH);
 		add(addButton , NORTH);
-		add(deleteButton , NORTH);
 		add(lookupButton , NORTH);
+		add(logInButton , NORTH);
+		add(new JLabel(EMPTY_LABEL_TEXT) , NORTH);
+		add(deleteButton , NORTH);
+		add(homeButton , NORTH); homeButton.setVisible(false);
+		add(logOutButton , NORTH); logOutButton.setVisible(false);
 		
 		add(statusTextField , WEST);
 		add(statusChangeButton , WEST);
@@ -81,6 +99,10 @@ public class FacePamphlet extends Program
 		add(new JLabel(EMPTY_LABEL_TEXT) , WEST);
 		add(friendTextField , WEST);
 		add(friendAddButton , WEST);
+		add(friendRemoveButton , WEST);
+		add(friendSuggestionButton , WEST);
+		
+		makeSomeInteractorsVisibleOrInvisible("Invisible");
 	}
     
   
@@ -97,10 +119,7 @@ public class FacePamphlet extends Program
 				addProfile(entry);
 			}
 		} else if (e.getSource() == deleteButton) { // if the user clicks "Delete" button
-			entry = nameTextField.getText();
-			if (!entry.equals("")) {
-				deleteProfile(entry);
-			}
+			deleteProfile();
 		} else if (e.getSource() == lookupButton) { // if the user clicks "Lookup" button
 			entry = nameTextField.getText();
 			if (!entry.equals("")) {
@@ -116,12 +135,41 @@ public class FacePamphlet extends Program
 			if (!entry.equals("")) {
 				changePicture(entry);
 			}
-		} else if (e.getSource() == friendTextField || e.getSource() == friendAddButton) { // if the user clicks "Add Friend" button or presses "Enter"
+		} else if (e.getSource() == friendAddButton) { // if the user clicks "Add Friend" button or presses "Enter"
 			entry = friendTextField.getText();
 			if (!entry.equals("")) {
 				addFriend(entry);
 			}
+		} else if (e.getSource() == logInButton) {
+			entry = nameTextField.getText();
+			if(!entry.equals("")) {
+				logIn(entry);
+			}
+			nameTextField.setText("");
+		} else if (e.getSource() == homeButton) {
+			canvas.removeAll();
+			canvas.displayProfile(currentProfile);
+			makeSomeInteractorsVisibleOrInvisible("Visible");
+			canvas.showMessage("Home page");
+			homeButton.setVisible(false);
+			logInButton.setVisible(false);
+		} else if (e.getSource() == logOutButton) {
+			canvas.removeAll();
+			canvas.showMessage("Logged out of " + currentProfile.getName());
+			currentProfile = null;
+			makeSomeInteractorsVisibleOrInvisible("Invisible");
+			addButton.setVisible(true);
+			logInButton.setVisible(true);
+		} else if (e.getSource() == friendRemoveButton) {
+			entry = friendTextField.getText();
+			if (!entry.equals("")) {
+				removeFriend(entry);
+			}
+			friendTextField.setText("");
+		} else if (e.getSource() == friendSuggestionButton) {
+			generateFriendSuggestion();
 		}
+		dataBase.writeInfoInDataFile();
 	}
     
     private void addProfile(String entry) { // what to do when user clicks "Add" button
@@ -129,30 +177,32 @@ public class FacePamphlet extends Program
     	if (dataBase.containsProfile(entry)){
 			canvas.showMessage("Profile with the name " + entry + " already exists");
 		} else {
-			dataBase.addProfile(new FacePamphletProfile(entry));
+			dataBase.addProfile(new FacePamphletProfileExtension(entry));
 			canvas.showMessage("New profile created");
+			currentProfile = dataBase.getProfile(entry);
+	    	canvas.displayProfile(currentProfile);
+			nameTextField.setText("");
+			makeSomeInteractorsVisibleOrInvisible("Visible");
+			addButton.setVisible(false);
+			logInButton.setVisible(false);
+			numberOfTimesFriendSuggestionWasUsed = 0;
 		}
-    	currentProfile = dataBase.getProfile(entry);
-    	canvas.displayProfile(currentProfile);
-		nameTextField.setText("");
     }
     
-    private void deleteProfile(String entry) { // what to do when user clicks "delete" button
+    private void deleteProfile() { // what to do when user clicks "delete" button
     	canvas.removeAll();
-    	if (dataBase.containsProfile(entry)){
-    		Iterator <String> friendsIterator = dataBase.getProfile(entry).getFriends();
-    		if (friendsIterator != null) {
-    			while(friendsIterator.hasNext()) {
-        			dataBase.getProfile(friendsIterator.next()).removeFriend(entry); // removing the entry from the friend lists of its friends
-        		}
+    	Iterator <String> friendsIterator = dataBase.getProfile(currentProfile.getName()).getFriends();
+		if (friendsIterator != null) {
+			while(friendsIterator.hasNext()) {
+    			dataBase.getProfile(friendsIterator.next()).removeFriend(currentProfile.getName()); // removing the entry from the friend lists of its friends
     		}
-			dataBase.deleteProfile(entry);
-			canvas.showMessage("Profile of " + entry + " deleted");
-		} else {
-			canvas.showMessage("A profile with the name " + entry + " doesn't exist");
 		}
+		dataBase.deleteProfile(currentProfile.getName());
+		canvas.showMessage("Profile of " + currentProfile.getName() + " deleted");
     	currentProfile = null;
-    	canvas.displayProfile(currentProfile);
+    	makeSomeInteractorsVisibleOrInvisible("Invisible");
+    	addButton.setVisible(true);
+    	logInButton.setVisible(true);
 		nameTextField.setText("");
     }
     
@@ -160,12 +210,14 @@ public class FacePamphlet extends Program
     	canvas.removeAll();
     	if (dataBase.containsProfile(entry)){
     		canvas.showMessage("Displaying " + entry);
-			currentProfile = dataBase.getProfile(entry);
+    		canvas.displayProfile(dataBase.getProfile(entry));
+    		makeSomeInteractorsVisibleOrInvisible("Invisible");
+    		if (currentProfile != null) {
+    			homeButton.setVisible(true);
+    		}
 		} else {
 			canvas.showMessage("A profile with the name " + entry + " doesn't exist");
-			currentProfile = null;
 		}
-    	canvas.displayProfile(currentProfile);
 		nameTextField.setText("");
     }
     
@@ -189,6 +241,7 @@ public class FacePamphlet extends Program
         	try { 
         		image = new GImage(entry);
         		dataBase.getProfile(currentProfile.getName()).setImage(image);
+        		dataBase.getProfile(currentProfile.getName()).setImageName(entry);
         		currentProfile = dataBase.getProfile(currentProfile.getName());
         		canvas.showMessage("Picture updated");
         	} catch (ErrorException ex) { 
@@ -234,6 +287,100 @@ public class FacePamphlet extends Program
     	}
     	canvas.displayProfile(currentProfile);
     	friendTextField.setText("");
+    }
+    
+    private void logIn(String entry) { // what happens when an user clicks the logIn button
+    	if (dataBase.containsProfile(entry)) {
+    		if (currentProfile == null) {
+    			currentProfile = dataBase.getProfile(entry);
+    			canvas.displayProfile(currentProfile);
+    			makeSomeInteractorsVisibleOrInvisible("Visible");
+    			canvas.showMessage("Welcome back " + entry);
+    		} else {
+    			if (entry.equals(currentProfile.getName())) {
+        			canvas.showMessage("You are already logged into this accaunt");
+        		} else {
+        			currentProfile = dataBase.getProfile(entry);
+        			canvas.displayProfile(currentProfile);
+        			makeSomeInteractorsVisibleOrInvisible("Visible");
+        			canvas.showMessage("Welcome back " + entry);
+        		}
+    		}
+    		addButton.setVisible(false);
+    		logInButton.setVisible(false);
+    		numberOfTimesFriendSuggestionWasUsed = 0;
+    	} else {
+    		canvas.showMessage("Profile with the name " + entry + " doesn't exist");
+    	}
+    }
+    
+    private void makeSomeInteractorsVisibleOrInvisible(String command) { // makes some interactors visible or invisible depending on what's on the display
+    	boolean bool;
+    	if (command.equals("Visible")) {
+    		bool = true;
+    	} else {
+    		bool = false;
+    	}
+    	statusTextField.setVisible(bool);
+    	statusChangeButton.setVisible(bool);
+    	pictureTextField.setVisible(bool);
+    	pictureChangeButton.setVisible(bool);
+    	friendTextField.setVisible(bool);
+    	friendAddButton.setVisible(bool);
+    	friendRemoveButton.setVisible(bool);
+    	friendSuggestionButton.setVisible(bool);
+    	deleteButton.setVisible(bool);
+    	logOutButton.setVisible(bool);
+    }
+    
+    private void removeFriend(String entry) { // removes a friend 
+    	boolean check = true;
+    	Iterator <String> friendsIterator = dataBase.getProfile(currentProfile.getName()).getFriends();
+		if (friendsIterator != null) {
+			while(friendsIterator.hasNext()) {
+				if (entry.equals(friendsIterator.next())) {
+					dataBase.getProfile(currentProfile.getName()).removeFriend(entry);
+					currentProfile.removeFriend(entry);
+					dataBase.getProfile(entry).removeFriend(currentProfile.getName()); // removing the entry from the friend lists of its friends
+					check = false;
+					canvas.removeAll();
+					canvas.displayProfile(currentProfile);
+					canvas.showMessage(entry + " removed from your friend list");
+					break;
+				}
+    		}
+		}
+		if (check) {
+			canvas.showMessage("You don't have a friend named " + entry);
+		}
+    }
+    
+    private void generateFriendSuggestion() { // generates a friend suggestion based on mutual friends
+    	Iterator<String> currentProfileIterator = currentProfile.getFriends();
+    	ArrayList<String> currentProfileFriends = new ArrayList<String>();
+    	while(currentProfileIterator.hasNext()) {
+    		currentProfileFriends.add(currentProfileIterator.next());
+    	}
+    	boolean checkcheck = true;
+    	for(int i = 0; i < currentProfileFriends.size(); i++) {
+    		Iterator<String> friendsIterator = dataBase.getProfile(currentProfileFriends.get(i)).getFriends();
+    		while(friendsIterator.hasNext()) {
+    			String friendOfAFriend = friendsIterator.next();
+    			boolean check = true;
+    			for(int j = 0; j < currentProfileFriends.size(); j++) {
+    				if (friendOfAFriend.equals(currentProfileFriends.get(j)) || friendOfAFriend.equals(currentProfile.getName())) {
+    					check = false;
+    				}
+    			}
+    			if (check) {
+    				canvas.showMessage("Friend Suggestion: " + friendOfAFriend);
+    				checkcheck = false;
+    			}
+    		}
+    	}
+    	if (checkcheck) {
+    		canvas.showMessage("No Friend Suggestions ");
+    	}
     }
 
 }

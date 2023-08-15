@@ -1,5 +1,5 @@
 /*
- * File: FacePamphletProfile.java
+ * File: FacePamphletProfileExtension.java
  * ------------------------------
  * This class keeps track of all the information for one profile
  * in the FacePamphlet social network.  Each profile contains a
@@ -11,9 +11,9 @@
 import acm.graphics.*;
 import java.util.*;
 
-public class FacePamphletProfile implements FacePamphletConstants {
+public class FacePamphletProfileExtension implements FacePamphletConstants {
 	
-	private String profileName , profileStatus;
+	private String profileName , profileStatus , imageName;
 	private GImage profileImage;
 	private ArrayList<String> profileFriends= new ArrayList<String>();
 	
@@ -23,7 +23,7 @@ public class FacePamphletProfile implements FacePamphletConstants {
 	 * This method takes care of any initialization needed for
 	 * the profile.
 	 */
-	public FacePamphletProfile(String name) {
+	public FacePamphletProfileExtension(String name) {
 		profileName = name;
 	}
 
@@ -110,6 +110,7 @@ public class FacePamphletProfile implements FacePamphletConstants {
 	}
 	
 	/** 
+	 * 
 	 * This method returns a string representation of the profile.  
 	 * This string is of the form: "name (status): list of friends", 
 	 * where name and status are set accordingly and the list of 
@@ -128,6 +129,14 @@ public class FacePamphletProfile implements FacePamphletConstants {
 			info += profileFriends.get(i);
 		}
 		return info;
+	}
+	
+	public void setImageName(String name) { // saving the name of the image to be able to read it from the database file
+		imageName = name;
+	}
+	
+	public String getImageName() {
+		return imageName;
 	}
 	
 }

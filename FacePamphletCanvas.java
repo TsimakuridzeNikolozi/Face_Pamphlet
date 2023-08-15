@@ -1,5 +1,5 @@
 /*
- * File: FacePamphletCanvas.java
+ * File: FacePamphletCanvasExtension.java
  * -----------------------------
  * This class represents the canvas on which the profiles in the social
  * network are displayed.  NOTE: This class does NOT need to update the
@@ -8,10 +8,9 @@
 
 
 import acm.graphics.*;
-import java.awt.*;
 import java.util.*;
 
-public class FacePamphletCanvas extends GCanvas 
+public class FacePamphletCanvasExtension extends GCanvas 
 					implements FacePamphletConstants {
 	
 	// instance variables
@@ -24,7 +23,7 @@ public class FacePamphletCanvas extends GCanvas
 	 * This method takes care of any initialization needed for 
 	 * the display
 	 */
-	public FacePamphletCanvas() {
+	public FacePamphletCanvasExtension() {
 		messageLabel = new GLabel("");
 		nameLabel = new GLabel("");
 		imageLabel = new GLabel("");
@@ -59,14 +58,14 @@ public class FacePamphletCanvas extends GCanvas
 	 * (or an indication that an image does not exist), the status of
 	 * the user, and a list of the user's friends in the social network.
 	 */
-	public void displayProfile(FacePamphletProfile profile) {
+	public void displayProfile(FacePamphletProfileExtension profile) {
 		if (profile != null) {
 			assignValuesToVariables(profile);
 			addVariablesOnCanvas(profile);
 		}
 	}
 	
-	private void assignValuesToVariables(FacePamphletProfile profile) { // sets the values for every variable
+	private void assignValuesToVariables(FacePamphletProfileExtension profile) { // sets the values for every variable
 		nameLabel.setLabel(profile.getName());
 		if (profile.getImage() != null) {
 			image = profile.getImage();
@@ -82,7 +81,7 @@ public class FacePamphletCanvas extends GCanvas
 		friendsLabel.setLabel("Friends");
 	}
 	
-	private void addVariablesOnCanvas(FacePamphletProfile profile) { // adds everything on a canvas
+	private void addVariablesOnCanvas(FacePamphletProfileExtension profile) { // adds everything on a canvas
 		add(nameLabel , LEFT_MARGIN , TOP_MARGIN + nameLabel.getAscent());
 		if (image != null) { // checking if a profile has an image
 			add(image , LEFT_MARGIN , TOP_MARGIN + nameLabel.getHeight() + IMAGE_MARGIN);
@@ -106,6 +105,5 @@ public class FacePamphletCanvas extends GCanvas
 			}
 		}
 	}
-
-	
 }
+
